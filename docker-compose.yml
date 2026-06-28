@@ -1,0 +1,88 @@
+# KubeNova — Docker Compose
+#
+# Quick start:
+#   cp .env.example .env
+#   ./start.sh            (or: docker compose up)
+#
+# Profiles:
+#   ollama  — start the bundled Ollama container (default when COMPOSE_PROFILES=ollama in .env)
+#   (none)  — use an external LLM API (Anthropic, Gemini, OpenAI) — set LLM_API_KEY in .env
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: kubenova-backend:local
+    container_name: kubenova-backend
+    ports:
+      - "8000:8000"
+    environment:
+      KUBENOVA_ENV: ${KUBENOVA_ENV:-development}
+      KUBENOVA_LOG_LEVEL: ${KUBENOVA_LOG_LEVEL:-INFO}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434}
+      KUBENOVA_DATABASE_URL: sqlite+aiosqlite:///./data/kubenova.db
+    volumes:
+      - kubenova-data:/app/data
+      # Mount ~/.kube (or KUBECONFIG_DIR override). Directory is created if absent
+      # so the backend starts gracefully even with no local cluster configured.
+      - type: bind
+        source: "${KUBECONFIG_DIR:-${HOME}/.kube}"
+        target: /root/.kube
+        read_only: true
+        bind:
+          create_host_path: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: kubenova-frontend:local
+    container_name: kubenova-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Ollama (free local LLM) ───────────────────────────────────────────────
+  # Active only when COMPOSE_PROFILES=ollama (set automatically from .env.example).
+  # On first run this pulls the model (~2 GB) — subsequent starts use the cache.
+  # GPU note: Docker on macOS does not expose Apple Silicon GPU to containers;
+  #           Ollama runs on CPU inside Docker (~2–4 tok/s for llama3.2).
+  #           For GPU speed, run native Ollama and set LLM_BASE_URL in .env.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: kubenova-ollama
+    profiles: ["ollama"]
+    volumes:
+      - ollama-data:/root/.ollama
+    # Start server, wait for it, pull the model (idempotent), then keep serving.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "/bin/ollama serve & sleep 5 && /bin/ollama pull ${LLM_MODEL:-llama3.2}; wait"
+    restart: unless-stopped
+    healthcheck:
+      # Passes once the server is up AND at least one model is present.
+      test: ["CMD-SHELL", "/bin/ollama list 2>/dev/null | grep -q '.'"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 600s
+
+volumes:
+  kubenova-data:
+    driver: local
+  ollama-data:
+    driver: local
