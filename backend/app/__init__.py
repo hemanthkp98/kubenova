@@ -1,0 +1,1 @@
+"""KubeNova backend application package."""
