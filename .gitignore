@@ -40,6 +40,10 @@ frontend/.vite/
 .LSOverride
 **/.DS_Store
 
+# Claude Code context files
+CLAUDE.md
+.claude/
+
 # Editor
 .vscode/
 .idea/
