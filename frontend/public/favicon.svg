@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- KubeNova logo: geometric K + circuit trace motif -->
+  <rect width="32" height="32" rx="6" fill="#161b22"/>
+  <!-- K stem -->
+  <rect x="7" y="7" width="3" height="18" rx="1.5" fill="#58a6ff"/>
+  <!-- K upper arm -->
+  <path d="M10 16 L22 7" stroke="#58a6ff" stroke-width="3" stroke-linecap="round"/>
+  <!-- K lower arm -->
+  <path d="M10 16 L22 25" stroke="#58a6ff" stroke-width="3" stroke-linecap="round"/>
+  <!-- Circuit trace node dots -->
+  <circle cx="22" cy="7" r="2" fill="#bc8cff"/>
+  <circle cx="22" cy="25" r="2" fill="#bc8cff"/>
+  <circle cx="16" cy="16" r="1.5" fill="#3fb950"/>
+</svg>

@@ -1,0 +1,12 @@
+# syntax=docker/dockerfile:1
+# KubeNova Frontend — Development Dockerfile
+# Installs dependencies at build time; source is mounted as a volume at runtime.
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
