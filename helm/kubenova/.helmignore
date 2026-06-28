@@ -1,0 +1,8 @@
+# Helm ignore file — exclude files from the chart package.
+.DS_Store
+*.bak
+*.swp
+*.tmp
+.git/
+.gitignore
+*.md

@@ -1,0 +1,17 @@
+apiVersion: v2
+name: kubenova
+description: KubeNova — web-based Kubernetes chat interface. Talk to your cluster. See it live. Fix it fast.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - kubernetes
+  - ai
+  - chat
+  - cluster-management
+home: https://github.com/kubenova/kubenova
+sources:
+  - https://github.com/kubenova/kubenova
+maintainers:
+  - name: KubeNova Contributors
+    email: maintainers@kubenova.dev

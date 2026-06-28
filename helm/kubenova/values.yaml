@@ -1,0 +1,83 @@
+# KubeNova Helm Chart default values.
+# Override these in a values.yaml file or via --set flags.
+
+# ---- Backend ----
+backend:
+  image:
+    repository: ghcr.io/kubenova/kubenova-backend
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "512Mi"
+  env:
+    KUBENOVA_ENV: production
+    KUBENOVA_LOG_LEVEL: INFO
+    MAX_LOG_LINES: "500"
+    AUDIT_PAGE_SIZE: "50"
+  service:
+    port: 8000
+
+# ---- Frontend ----
+frontend:
+  image:
+    repository: ghcr.io/kubenova/kubenova-frontend
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+  service:
+    port: 80
+
+# ---- LLM Provider ----
+llm:
+  # Provider name: anthropic | openai | ollama
+  provider: anthropic
+  # Model identifier
+  model: claude-sonnet-4-6
+  # Name of a Kubernetes Secret containing the LLM_API_KEY key.
+  # The secret is created separately to avoid storing keys in values.yaml.
+  apiKeySecret: ""
+  # Ollama base URL (only used when provider=ollama)
+  baseUrl: ""
+
+# ---- Ingress ----
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  host: kubenova.example.com
+  tls:
+    enabled: false
+    secretName: kubenova-tls
+
+# ---- Service Account + RBAC ----
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# ---- Database ----
+# The default uses an ephemeral SQLite volume.
+# For production, set to a PostgreSQL URL.
+database:
+  url: "sqlite+aiosqlite:///./kubenova.db"
+
+# ---- CORS ----
+corsOrigins:
+  - "http://localhost:5173"
+
+# ---- Namespace ----
+# If set, kubeconfig context switches are restricted to this namespace.
+defaultNamespace: ""

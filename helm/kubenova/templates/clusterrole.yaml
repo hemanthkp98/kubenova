@@ -1,0 +1,70 @@
+{{- if .Values.serviceAccount.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kubenova.fullname" . }}
+  labels:
+    {{- include "kubenova.labels" . | nindent 4 }}
+rules:
+  # Read-only access to core workload resources.
+  - apiGroups: [""]
+    resources:
+      - pods
+      - services
+      - nodes
+      - namespaces
+      - events
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+
+  # Pod log streaming.
+  - apiGroups: [""]
+    resources:
+      - pods/log
+    verbs:
+      - get
+      - list
+
+  # Apps API — deployments, statefulsets, daemonsets.
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - statefulsets
+      - daemonsets
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+
+  # Batch — jobs and cronjobs.
+  - apiGroups: ["batch"]
+    resources:
+      - jobs
+      - cronjobs
+    verbs:
+      - get
+      - list
+      - watch
+
+  # Networking — ingresses.
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+
+  # Apply manifests (requires explicit user approval in the UI).
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+{{- end }}
