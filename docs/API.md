@@ -64,9 +64,27 @@ Approve or reject a pending command after reviewing the dry-run preview.
 
 ---
 
+### GET /api/chat/llm-info
+
+Return the active LLM provider and model name as configured on the backend.
+
+**Response 200**
+```json
+{
+  "provider": "openai",
+  "model": "gemini-2.5-flash"
+}
+```
+
+`provider` is one of `anthropic`, `openai`, or `ollama`. When using Google Gemini, `provider` is `openai` (Gemini uses the OpenAI-compatible endpoint).
+
+---
+
 ### WS /api/ws/chat
 
 Streaming chat WebSocket. All messages are JSON-encoded strings.
+
+Conversation history (messages, cluster context, namespace) is maintained server-side for the lifetime of the WebSocket connection. Each message inherits the context set by previous messages in the same session. Sending `cluster_context` or `namespace` on any message updates the session-level value for all subsequent messages.
 
 #### Client → Server messages
 
@@ -90,6 +108,12 @@ Streaming chat WebSocket. All messages are JSON-encoded strings.
   "session_id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
+**Clear context message** (resets server-side conversation history and cluster context for this session):
+```json
+{ "type": "clear_context" }
+```
+Server response: `{"type": "done", "content": "context_cleared"}`
 
 #### Server → Client messages
 
