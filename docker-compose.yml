@@ -25,13 +25,14 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434}
       KUBENOVA_DATABASE_URL: sqlite+aiosqlite:///./data/kubenova.db
+      KUBECONFIG_PATH: ${KUBECONFIG_PATH:-}
     volumes:
       - kubenova-data:/app/data
       # Mount ~/.kube (or KUBECONFIG_DIR override). Directory is created if absent
       # so the backend starts gracefully even with no local cluster configured.
       - type: bind
         source: "${KUBECONFIG_DIR:-${HOME}/.kube}"
-        target: /root/.kube
+        target: /kube
         read_only: true
         bind:
           create_host_path: true

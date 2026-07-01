@@ -9,7 +9,7 @@
  */
 
 import axios, { type AxiosInstance } from "axios";
-import type { ChatRequest, ChatResponse, ApprovalRequest, ApprovalResponse } from "@/types/chat";
+import type { ChatRequest, ChatResponse, ApprovalRequest, ApprovalResponse, LLMInfo } from "@/types/chat";
 import type { ClusterContext, ClusterStatus } from "@/types/cluster";
 import type { PodInfo, DeploymentInfo, ServiceInfo, NodeInfo, EventInfo, PaginatedAuditEvents } from "@/types/resource";
 
@@ -33,6 +33,9 @@ export const chatApi = {
 
   approveCommand: (req: ApprovalRequest): Promise<ApprovalResponse> =>
     apiClient.post<ApprovalResponse>("/chat/approve", req).then((r) => r.data),
+
+  getLLMInfo: (): Promise<LLMInfo> =>
+    apiClient.get<LLMInfo>("/chat/llm-info").then((r) => r.data),
 };
 
 // ---------------------------------------------------------------------------

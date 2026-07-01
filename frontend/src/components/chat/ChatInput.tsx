@@ -7,7 +7,7 @@
  * - The textarea auto-grows up to 6 rows.
  */
 
-import { useRef, useState, KeyboardEvent } from "react";
+import { useRef, useState, useEffect, KeyboardEvent } from "react";
 import { Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,13 +27,24 @@ export function ChatInput({
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Focus the textarea whenever it becomes enabled (WebSocket connected,
+  // streaming finished). Firefox ignores autoFocus on disabled elements,
+  // so we drive focus imperatively instead.
+  useEffect(() => {
+    if (!disabled) {
+      textareaRef.current?.focus();
+    }
+  }, [disabled]);
+
   const handleSend = () => {
     const trimmed = value.trim();
     if (!trimmed || disabled) return;
     onSend(trimmed);
     setValue("");
-    // Reset height.
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.focus();
+    }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {

@@ -9,6 +9,7 @@ with postgresql+asyncpg://user:pass@host/db and install asyncpg.
 
 from __future__ import annotations
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
@@ -28,6 +29,15 @@ def get_engine() -> AsyncEngine:
             echo=settings.KUBENOVA_ENV == "development",
             connect_args={"check_same_thread": False},
         )
+
+        # WAL mode allows concurrent readers + one writer, preventing
+        # "database is locked" errors when the chat WebSocket and the
+        # resource-panel polling write audit events simultaneously.
+        @event.listens_for(_engine.sync_engine, "connect")
+        def set_wal_mode(dbapi_conn, _):  # type: ignore[misc]
+            dbapi_conn.execute("PRAGMA journal_mode=WAL")
+            dbapi_conn.execute("PRAGMA busy_timeout=5000")
+
     return _engine
 
 

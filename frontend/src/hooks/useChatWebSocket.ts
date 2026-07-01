@@ -18,6 +18,7 @@ const WS_URL = `${typeof window !== "undefined"
 
 export interface UseChatWebSocketReturn {
   sendMessage: (payload: ChatRequest) => void;
+  clearContext: () => void;
   messages: ChatMessage[];
   streamingContent: string;
   commandPreview: CommandPreview | null;
@@ -102,8 +103,14 @@ export function useChatWebSocket(sessionId: string): UseChatWebSocketReturn {
     [sessionId, addMessage, setCommandPreview]
   );
 
+  const clearContext = useCallback(() => {
+    clearHistory();
+    wsSend(JSON.stringify({ type: "clear_context" }));
+  }, [clearHistory, wsSend]);
+
   return {
     sendMessage,
+    clearContext,
     messages,
     streamingContent,
     commandPreview,

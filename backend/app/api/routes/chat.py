@@ -19,6 +19,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_audit_logger, get_db
+from app.config import get_settings
 from app.core.agents.graph import compiled_graph
 from app.core.agents.state import KubeNovaState
 from app.core.audit.logger import AuditLogger
@@ -33,6 +34,13 @@ from app.models.chat import (
 )
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+@router.get("/llm-info")
+async def get_llm_info() -> dict:
+    """Return the active LLM provider and model name as configured on the backend."""
+    s = get_settings()
+    return {"provider": s.LLM_PROVIDER, "model": s.LLM_MODEL}
 
 
 def _extract_final_text(messages: list[Any]) -> str:
@@ -159,6 +167,11 @@ async def websocket_chat(
     await websocket.accept()
     logger.info("WebSocket chat connection opened.")
 
+    # Session state persisted across messages for the lifetime of this connection.
+    session_messages: list[Any] = []
+    session_cluster_context: str = ""
+    session_namespace: str = "default"
+
     try:
         while True:
             try:
@@ -173,7 +186,24 @@ async def websocket_chat(
                 continue
 
             if msg.type == "chat":
-                await _handle_chat_message(websocket, db, audit, msg)
+                # Update session-level context whenever the client provides it.
+                if msg.cluster_context:
+                    session_cluster_context = msg.cluster_context
+                if msg.namespace:
+                    session_namespace = msg.namespace
+
+                session_messages = await _handle_chat_message(
+                    websocket, db, audit, msg,
+                    history=session_messages,
+                    cluster_context=session_cluster_context,
+                    namespace=session_namespace,
+                )
+            elif msg.type == "clear_context":
+                session_messages = []
+                logger.info("Chat context cleared by client.")
+                await websocket.send_text(
+                    StreamChunk(type="done", content="context_cleared").model_dump_json()
+                )
             elif msg.type == "approval":
                 # Approval handled by the dedicated REST endpoint; acknowledge.
                 await websocket.send_text(
@@ -197,11 +227,19 @@ async def _handle_chat_message(
     db: AsyncSession,
     audit: AuditLogger,
     msg: WSIncomingMessage,
-) -> None:
-    """Process a single chat message received over the WebSocket."""
+    *,
+    history: list[Any],
+    cluster_context: str,
+    namespace: str,
+) -> list[Any]:
+    """
+    Process a single chat message received over the WebSocket.
+
+    Accepts the accumulated conversation history and resolved cluster/namespace
+    context (already updated by the caller). Returns the updated history
+    (original history + this turn's human message + agent replies).
+    """
     session_id = msg.session_id or str(uuid.uuid4())
-    cluster_context = msg.cluster_context or ""
-    namespace = msg.namespace or "default"
     user_message = msg.message or ""
 
     audit_create = AuditEventCreate(
@@ -212,8 +250,15 @@ async def _handle_chat_message(
     )
     audit_event = await audit.write(db, audit_create)
 
+    human_msg = HumanMessage(content=user_message)
+
+    # Object ids of messages that already existed before this turn.
+    # Used to filter out history items re-emitted by executor_node / blocked_node,
+    # both of which return the full messages list (not just the delta).
+    existing_ids: set[int] = {id(m) for m in history} | {id(human_msg)}
+
     initial_state: KubeNovaState = {
-        "messages": [HumanMessage(content=user_message)],
+        "messages": [*history, human_msg],
         "cluster_context": cluster_context,
         "namespace": namespace,
         "user_intent": user_message,
@@ -229,21 +274,31 @@ async def _handle_chat_message(
         "generated_command": None,
     }
 
+    # Will be replaced by the last node output that contains "messages".
+    # executor_node returns the full accumulated list (history + this turn's
+    # AI/tool messages), which is exactly what we want as next-turn history.
+    final_messages: list[Any] = [*history, human_msg]
+
     try:
         async for chunk in compiled_graph.astream(initial_state, stream_mode="updates"):
             for node_name, node_output in chunk.items():
-                # Stream token content from executor messages.
-                if node_name == "executor":
-                    messages = node_output.get("messages", [])
-                    for message in messages:
-                        if isinstance(message, AIMessage) and message.content:
+                # Keep final_messages pointing at the most recent full messages list.
+                if "messages" in node_output:
+                    final_messages = node_output["messages"]
+
+                # Stream only NEW AI message content (skip history re-emitted by nodes).
+                if node_name in ("executor", "blocked"):
+                    for message in node_output.get("messages", []):
+                        if (
+                            isinstance(message, AIMessage)
+                            and message.content
+                            and id(message) not in existing_ids
+                        ):
                             content = str(message.content)
-                            # Stream in chunks of ~50 chars to simulate token streaming.
                             for i in range(0, len(content), 50):
-                                token_chunk = content[i : i + 50]
                                 await websocket.send_text(
                                     StreamChunk(
-                                        type="token", content=token_chunk
+                                        type="token", content=content[i : i + 50]
                                     ).model_dump_json()
                                 )
 
@@ -261,6 +316,7 @@ async def _handle_chat_message(
         await websocket.send_text(
             StreamChunk(type="done", content="").model_dump_json()
         )
+        return final_messages
 
     except Exception as exc:
         logger.error("Agent stream error: {}", exc)
@@ -268,3 +324,4 @@ async def _handle_chat_message(
         await websocket.send_text(
             StreamChunk(type="error", content=str(exc)).model_dump_json()
         )
+        return history  # Don't corrupt history on error
