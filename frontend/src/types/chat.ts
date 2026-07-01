@@ -58,11 +58,16 @@ export interface ApprovalResponse {
 }
 
 export interface WSIncomingMessage {
-  type: "chat" | "approval";
+  type: "chat" | "approval" | "clear_context";
   message?: string;
   cluster_context?: string;
   namespace?: string;
   session_id?: string;
   approved?: boolean;
   audit_event_id?: string;
+}
+
+export interface LLMInfo {
+  provider: string;
+  model: string;
 }

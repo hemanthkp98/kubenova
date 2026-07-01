@@ -6,6 +6,8 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { CommandPreview } from "./CommandPreview";
@@ -15,7 +17,14 @@ import { useChatWebSocket } from "@/hooks/useChatWebSocket";
 import { useClusterStore } from "@/store/clusterStore";
 import { generateId } from "@/lib/utils";
 import { useChatStore } from "@/store/chatStore";
+import { chatApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+const PROVIDER_COLORS: Record<string, string> = {
+  anthropic: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  openai:    "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  ollama:    "bg-purple-500/15 text-purple-400 border-purple-500/30",
+};
 
 interface ChatPanelProps {
   sessionId?: string;
@@ -34,8 +43,15 @@ export function ChatPanel({ sessionId, className }: ChatPanelProps) {
     isStreaming,
     isConnected,
     sendMessage,
+    clearContext,
     approveCommand,
   } = useChatWebSocket(sid);
+
+  const { data: llmInfo } = useQuery({
+    queryKey: ["llm-info"],
+    queryFn: chatApi.getLLMInfo,
+    staleTime: Infinity,
+  });
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +79,38 @@ export function ChatPanel({ sessionId, className }: ChatPanelProps) {
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
+      {/* Chat header — LLM badge + clear context */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-kn-border bg-kn-bg-surface">
+        {llmInfo ? (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-mono border",
+              PROVIDER_COLORS[llmInfo.provider] ?? "bg-kn-bg-elevated text-kn-text-muted border-kn-border"
+            )}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+            {llmInfo.model}
+          </span>
+        ) : (
+          <span />
+        )}
+
+        <button
+          onClick={clearContext}
+          disabled={messages.length === 0 && !streamingContent}
+          title="Clear conversation context"
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors",
+            "border border-kn-border text-kn-text-muted",
+            "hover:text-kn-danger hover:border-kn-danger/40 hover:bg-kn-danger/5",
+            "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-kn-text-muted disabled:hover:border-kn-border disabled:hover:bg-transparent"
+          )}
+        >
+          <Trash2 size={12} />
+          Clear context
+        </button>
+      </div>
+
       {/* Incident mode banner */}
       {incidentMode && (
         <div className="px-4 pt-3">

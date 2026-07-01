@@ -88,7 +88,7 @@ class ApprovalResponse(BaseModel):
 class WSIncomingMessage(BaseModel):
     """Incoming WebSocket message from the client."""
 
-    type: Literal["chat", "approval"] = Field(default="chat")
+    type: Literal["chat", "approval", "clear_context"] = Field(default="chat")
     message: str | None = None
     cluster_context: str | None = None
     namespace: str | None = Field(default="default")
