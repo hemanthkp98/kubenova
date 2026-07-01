@@ -6,7 +6,7 @@ KubeNova reads all contexts from the kubeconfig file and lets users switch betwe
 
 ## How it works
 
-1. On startup, `ClusterManager.list_contexts()` reads `~/.kube/config` (or `KUBECONFIG_PATH`) and enumerates all contexts.
+1. On startup, `ClusterManager.list_contexts()` reads the kubeconfig file at `KUBECONFIG_PATH` (or `~/.kube/config` by default) and enumerates all contexts.
 2. The active context defaults to the `current-context` field in kubeconfig, or `DEFAULT_CLUSTER_CONTEXT` if set.
 3. When the user selects a context in the UI (GET `/api/clusters/switch`), `ClusterManager.switch_context()` sets the new active context and clears the client cache.
 4. All subsequent API calls use the new context.
@@ -15,13 +15,15 @@ KubeNova reads all contexts from the kubeconfig file and lets users switch betwe
 
 ## Kubeconfig setup
 
-Mount your kubeconfig into the Docker container read-only:
+Mount your kubeconfig into the Docker container read-only. The target path is `/kube` (not `/root/.kube`) because the backend runs as non-root user `kubenova`:
 
 ```yaml
 # docker-compose.yml
 volumes:
-  - ~/.kube:/root/.kube:ro
+  - ~/.kube:/kube:ro
 ```
+
+Set `KUBECONFIG_PATH` in `.env` to point to the specific file inside the container (e.g. `/kube/config` or `/kube/my-cluster.yaml`). This is the app-level setting that `ClusterManager` reads — the standard `KUBECONFIG` env var is not used.
 
 For the Helm chart, KubeNova uses the pod's service account credentials when running inside the cluster. To add remote clusters, create a kubeconfig Secret and mount it.
 

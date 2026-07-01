@@ -172,7 +172,7 @@ Server-Sent Events (SSE) are unidirectional: the server pushes, the client canno
 
 ### Why kubeconfig passthrough instead of custom auth?
 
-Kubernetes has a mature, well-understood credential system in kubeconfig. Re-implementing cluster authentication would introduce security risk and maintenance burden. KubeNova reads the host's kubeconfig (mounted read-only at `/root/.kube/config` in Docker), uses the existing context credentials, and adds its own audit layer on top. This means RBAC on the cluster side is the source of truth for what KubeNova can do — the service account in the Helm chart grants only the minimum required permissions.
+Kubernetes has a mature, well-understood credential system in kubeconfig. Re-implementing cluster authentication would introduce security risk and maintenance burden. KubeNova reads the host's kubeconfig (mounted read-only at `/kube` in Docker — not `/root/.kube`, because the backend runs as non-root user `kubenova`), uses the existing context credentials, and adds its own audit layer on top. This means RBAC on the cluster side is the source of truth for what KubeNova can do — the service account in the Helm chart grants only the minimum required permissions.
 
 ### Frontend state management split
 
