@@ -7,7 +7,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Trash2, Download } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { CommandPreview } from "./CommandPreview";
@@ -73,6 +73,40 @@ export function ChatPanel({ sessionId, className }: ChatPanelProps) {
     });
   };
 
+  const handleExportMarkdown = () => {
+    if (messages.length === 0) return;
+
+    const header = `# KubeNova Chat History — Cluster: ${activeCluster}\n*Generated on: ${new Date().toLocaleString()}*\n\n---\n\n`;
+
+    const content = messages
+      .map((msg) => {
+        const role =
+          msg.role === "user"
+            ? "User"
+            : msg.role === "assistant"
+            ? "Assistant"
+            : "System";
+        const dateStr = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "";
+        const timeHeader = dateStr ? ` (${dateStr})` : "";
+        return `### **${role}**${timeHeader}\n\n${msg.content}\n\n`;
+      })
+      .join("---\n\n");
+
+    const blob = new Blob([header + content], {
+      type: "text/markdown;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `kubenova-chat-${activeCluster}-${new Date().toISOString().slice(0, 10)}.md`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // The most recently created audit event id is embedded in the last assistant message
   // or the command preview. For simplicity we track a placeholder here.
   const pendingAuditId = commandPreview ? "pending" : null;
@@ -95,20 +129,37 @@ export function ChatPanel({ sessionId, className }: ChatPanelProps) {
           <span />
         )}
 
-        <button
-          onClick={clearContext}
-          disabled={messages.length === 0 && !streamingContent}
-          title="Clear conversation context"
-          className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors",
-            "border border-kn-border text-kn-text-muted",
-            "hover:text-kn-danger hover:border-kn-danger/40 hover:bg-kn-danger/5",
-            "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-kn-text-muted disabled:hover:border-kn-border disabled:hover:bg-transparent"
-          )}
-        >
-          <Trash2 size={12} />
-          Clear context
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportMarkdown}
+            disabled={messages.length === 0}
+            title="Export conversation history as Markdown"
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors",
+              "border border-kn-border text-kn-text-muted",
+              "hover:text-kn-purple hover:border-kn-purple/40 hover:bg-kn-purple/5",
+              "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-kn-text-muted disabled:hover:border-kn-border disabled:hover:bg-transparent"
+            )}
+          >
+            <Download size={12} />
+            Export chat
+          </button>
+
+          <button
+            onClick={clearContext}
+            disabled={messages.length === 0 && !streamingContent}
+            title="Clear conversation context"
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors",
+              "border border-kn-border text-kn-text-muted",
+              "hover:text-kn-danger hover:border-kn-danger/40 hover:bg-kn-danger/5",
+              "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-kn-text-muted disabled:hover:border-kn-border disabled:hover:bg-transparent"
+            )}
+          >
+            <Trash2 size={12} />
+            Clear context
+          </button>
+        </div>
       </div>
 
       {/* Incident mode banner */}
@@ -125,16 +176,38 @@ export function ChatPanel({ sessionId, className }: ChatPanelProps) {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-3">
-              <div className="text-4xl">⎈</div>
+            <div className="text-center space-y-3 w-full max-w-md">
+              <div className="text-4xl animate-pulse">⎈</div>
               <p className="text-kn-text-primary font-semibold">KubeNova</p>
               <p className="text-kn-text-muted text-sm">
                 Talk to your cluster. See it live. Fix it fast.
               </p>
-              {!activeCluster && (
+              {!activeCluster ? (
                 <p className="text-kn-warning text-xs">
                   Select a cluster from the top bar to get started.
                 </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  {[
+                    { text: "Show failing pods", icon: "🔍" },
+                    { text: "List cluster nodes", icon: "📋" },
+                    { text: "View recent events", icon: "⚠️" },
+                    { text: "List system services", icon: "🌐" },
+                  ].map((prompt, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSend(prompt.text)}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg text-left transition-all text-xs font-medium border",
+                        "bg-kn-bg-surface border-kn-border text-kn-text-muted",
+                        "hover:bg-kn-bg-elevated hover:border-kn-purple/40 hover:text-kn-text-primary hover:-translate-y-0.5"
+                      )}
+                    >
+                      <span className="text-base flex-shrink-0">{prompt.icon}</span>
+                      <span>{prompt.text}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           </div>
