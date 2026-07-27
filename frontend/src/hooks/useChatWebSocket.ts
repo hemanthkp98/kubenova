@@ -24,7 +24,7 @@ export interface UseChatWebSocketReturn {
   commandPreview: CommandPreview | null;
   isStreaming: boolean;
   isConnected: boolean;
-  approveCommand: (auditEventId: string, approved: boolean) => Promise<void>;
+  approveCommand: (auditEventId: string, approved: boolean, manifestYaml?: string) => Promise<void>;
   clearHistory: () => void;
 }
 
@@ -93,8 +93,13 @@ export function useChatWebSocket(sessionId: string): UseChatWebSocketReturn {
   );
 
   const approveCommand = useCallback(
-    async (auditEventId: string, approved: boolean) => {
-      await chatApi.approveCommand({ session_id: sessionId, audit_event_id: auditEventId, approved });
+    async (auditEventId: string, approved: boolean, manifestYaml?: string) => {
+      await chatApi.approveCommand({
+        session_id: sessionId,
+        audit_event_id: auditEventId,
+        approved,
+        manifest_yaml: manifestYaml,
+      });
       setCommandPreview(null);
       if (!approved) {
         addMessage("system", "Command cancelled by user.");

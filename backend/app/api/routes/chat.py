@@ -18,12 +18,15 @@ from langchain_core.messages import AIMessage, HumanMessage
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import asyncio
+
 from app.api.deps import get_audit_logger, get_db
 from app.config import get_settings
 from app.core.agents.graph import compiled_graph
 from app.core.agents.state import KubeNovaState
 from app.core.audit.logger import AuditLogger
-from app.core.audit.models import AuditEventCreate
+from app.core.audit.models import AuditEvent, AuditEventCreate
+from app.core.k8s.executor import apply_manifest, execute_kubectl_command
 from app.models.chat import (
     ApprovalRequest,
     ApprovalResponse,
@@ -130,20 +133,54 @@ async def approve_command(
     Deferred approval endpoint for HIGH-risk commands.
 
     The frontend calls this after the user clicks Approve or Cancel in the
-    CommandPreview modal. The audit log is updated with the decision.
+    CommandPreview modal. The audit log is updated with the decision, and if
+    approved, the command is executed or manifest is applied.
     """
     status = "accepted" if request.approved else "rejected"
-    await audit.update(
-        db,
-        request.audit_event_id,
-        {"approved": request.approved},
-    )
     logger.info(
         "Command {}: session={} audit_event={}",
         status,
         request.session_id,
         request.audit_event_id,
     )
+
+    # 1. Update approval status in the audit log
+    await audit.update(
+        db,
+        request.audit_event_id,
+        {"approved": request.approved},
+    )
+
+    if request.approved:
+        # Retrieve the original audit event to find command context and target context
+        audit_event = await db.get(AuditEvent, request.audit_event_id)
+        if audit_event is not None:
+            context = audit_event.cluster_context
+            exec_res = None
+
+            # Determine whether to apply edited/original manifest YAML or execute a CLI command
+            manifest_to_apply = request.manifest_yaml
+            if manifest_to_apply:
+                exec_res = await asyncio.to_thread(apply_manifest, manifest_to_apply, context)
+            elif audit_event.generated_command:
+                # If it's a manifest apply or restart command, run it securely
+                exec_res = await asyncio.to_thread(execute_kubectl_command, audit_event.generated_command, context)
+
+            if exec_res:
+                # Log execution result in database
+                await audit.update(
+                    db,
+                    request.audit_event_id,
+                    {
+                        "execution_result": exec_res.model_dump(),
+                        "error": None if exec_res.success else exec_res.message,
+                    },
+                )
+                if not exec_res.success:
+                    logger.error("Approved command execution failed: {}", exec_res.message)
+            else:
+                logger.warning("No command or manifest found to execute for approved audit event {}", request.audit_event_id)
+
     return ApprovalResponse(status=status)
 
 

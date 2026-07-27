@@ -180,7 +180,7 @@ export function ChatPanel({ sessionId, className }: ChatPanelProps) {
         <CommandPreview
           preview={commandPreview}
           auditEventId={pendingAuditId ?? "unknown"}
-          onApprove={(id) => void approveCommand(id, true)}
+          onApprove={(id, yaml) => void approveCommand(id, true, yaml)}
           onCancel={(id) => void approveCommand(id, false)}
         />
       )}

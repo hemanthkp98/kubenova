@@ -50,6 +50,7 @@ export interface ApprovalRequest {
   session_id: string;
   audit_event_id: string;
   approved: boolean;
+  manifest_yaml?: string;
 }
 
 export interface ApprovalResponse {

@@ -33,7 +33,7 @@ services:
       - type: bind
         source: "${KUBECONFIG_DIR:-${HOME}/.kube}"
         target: /kube
-        read_only: true
+        read_only: false
         bind:
           create_host_path: true
     restart: unless-stopped

@@ -77,6 +77,7 @@ class ApprovalRequest(BaseModel):
     session_id: str
     audit_event_id: str
     approved: bool
+    manifest_yaml: str | None = None
 
 
 class ApprovalResponse(BaseModel):
