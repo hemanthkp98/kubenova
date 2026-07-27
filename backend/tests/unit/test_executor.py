@@ -18,6 +18,7 @@ from app.core.k8s.executor import (
     apply_manifest,
     classify_intent_risk,
     dry_run_manifest,
+    execute_kubectl_command,
     generate_kubectl_command,
 )
 
@@ -243,3 +244,45 @@ class TestGenerateKubectlCommand:
         """Unknown intent returns a kubectl get command."""
         cmd = generate_kubectl_command("show pods", {"kind": "pod", "namespace": "default"})
         assert "kubectl" in cmd
+
+
+class TestExecuteKubectlCommand:
+    """Tests for execute_kubectl_command()."""
+
+    def test_invalid_command_str(self) -> None:
+        """Non-kubectl command returns success=False."""
+        result = execute_kubectl_command("echo hello", "minikube")
+        assert result.success is False
+        assert "Invalid command string" in result.message
+
+    def test_successful_command_exec(self) -> None:
+        """execute_kubectl_command returns success=True when subprocess exits 0."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="deployment.apps/nginx-web restarted",
+                stderr="",
+            )
+            result = execute_kubectl_command("kubectl rollout restart deployment/nginx-web", "minikube")
+            assert result.success is True
+            assert "restarted" in result.message
+            # Verify correct args passed to subprocess
+            called_cmd = mock_run.call_args[0][0]
+            assert "kubectl" in called_cmd
+            assert "rollout" in called_cmd
+            assert "restart" in called_cmd
+            assert "deployment/nginx-web" in called_cmd
+
+    def test_failed_command_exec(self) -> None:
+        """execute_kubectl_command returns success=False when subprocess exits non-zero."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = CompletedProcess(
+                args=[],
+                returncode=1,
+                stdout="",
+                stderr="Error from server (NotFound): deployments.apps 'invalid' not found",
+            )
+            result = execute_kubectl_command("kubectl rollout restart deployment/invalid", "minikube")
+            assert result.success is False
+            assert "not found" in result.message

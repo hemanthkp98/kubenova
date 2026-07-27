@@ -24,7 +24,7 @@ import { useState } from "react";
 interface CommandPreviewProps {
   preview: CommandPreviewType;
   auditEventId: string;
-  onApprove: (auditEventId: string) => void;
+  onApprove: (auditEventId: string, manifestYaml?: string) => void;
   onCancel: (auditEventId: string) => void;
 }
 
@@ -47,6 +47,7 @@ function DiffLine({ line }: { line: string }) {
 
 export function CommandPreview({ preview, auditEventId, onApprove, onCancel }: CommandPreviewProps) {
   const [copied, setCopied] = useState(false);
+  const [editedYaml, setEditedYaml] = useState(preview.manifest_yaml || "");
   const approveButtonRef = useRef<HTMLButtonElement>(null);
   const risk = RISK_CONFIG[preview.risk_level];
   const isCritical = preview.risk_level === "CRITICAL";
@@ -140,11 +141,11 @@ export function CommandPreview({ preview, auditEventId, onApprove, onCancel }: C
             </div>
           )}
 
-          {/* YAML editor (read-only) */}
+          {/* YAML editor (editable) */}
           {preview.manifest_yaml && (
             <div>
-              <p className="text-xs text-kn-text-muted uppercase tracking-wider mb-2">Manifest YAML</p>
-              <YamlEditor value={preview.manifest_yaml} readOnly />
+              <p className="text-xs text-kn-text-muted uppercase tracking-wider mb-2">Manifest YAML (Editable)</p>
+              <YamlEditor value={editedYaml} onChange={setEditedYaml} />
             </div>
           )}
         </div>
@@ -160,7 +161,7 @@ export function CommandPreview({ preview, auditEventId, onApprove, onCancel }: C
           </button>
           <button
             ref={approveButtonRef}
-            onClick={() => onApprove(auditEventId)}
+            onClick={() => onApprove(auditEventId, preview.manifest_yaml ? editedYaml : undefined)}
             disabled={isCritical || !preview.is_safe}
             className={cn(
               "px-4 py-2 text-sm font-medium rounded-md transition-colors",

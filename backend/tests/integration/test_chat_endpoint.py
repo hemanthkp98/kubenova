@@ -94,21 +94,6 @@ class TestChatEndpoint:
 
     async def test_approve_command_accepted(self, async_client) -> None:
         """POST /api/chat/approve with approved=true returns status='accepted'."""
-        # First write a real audit event to have a valid ID.
-        from app.core.audit.models import AuditEventCreate
-        from app.api.deps import get_audit_logger
-
-        audit = get_audit_logger()
-        event = await audit.write(
-            db_session if False else ...,  # Use a fresh write via the endpoint
-            AuditEventCreate(
-                session_id="sess-approve",
-                user_intent="delete pod",
-                cluster_context="minikube",
-                namespace="default",
-                risk_level="HIGH",
-            ),
-        )
         # We can't easily get the session here, so just test the endpoint directly.
         response = await async_client.post(
             "/api/chat/approve",

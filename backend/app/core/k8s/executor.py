@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import subprocess
 import tempfile
 from enum import Enum
@@ -342,3 +343,77 @@ def generate_kubectl_command(intent: str, resources: dict[str, Any]) -> str:
 
     # Generic fallback.
     return f"kubectl get {kind} {name} -n {namespace}".strip()
+
+
+def execute_kubectl_command(command_str: str, cluster_context: str) -> ApplyResult:
+    """
+    Execute a raw kubectl command string securely by injecting the cluster context.
+
+    Args:
+        command_str: The generated kubectl command string to execute.
+        cluster_context: The kubeconfig context name to target.
+
+    Returns:
+        ApplyResult with success flag and CLI stdout/stderr.
+    """
+    if not command_str.strip().startswith("kubectl"):
+        return ApplyResult(
+            success=False,
+            resource_name="unknown",
+            resource_kind="unknown",
+            message=f"Invalid command string (must start with kubectl): {command_str}",
+        )
+
+    args = shlex.split(command_str)
+    # Strip the leading 'kubectl'
+    args = args[1:]
+
+    # Remove any --context flag to avoid duplicate context arguments
+    filtered_args = []
+    skip = False
+    for arg in args:
+        if skip:
+            skip = False
+            continue
+        if arg == "--context":
+            skip = True
+            continue
+        if arg.startswith("--context="):
+            continue
+        filtered_args.append(arg)
+
+    cmd = (
+        ["kubectl"]
+        + _build_kubeconfig_args(cluster_context)
+        + filtered_args
+    )
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        success = result.returncode == 0
+        message = result.stdout.strip() if success else result.stderr.strip()
+        logger.info(
+            "kubectl command execution {}: {}",
+            "succeeded" if success else "failed",
+            message[:200],
+        )
+        return ApplyResult(
+            success=success,
+            resource_name="unknown",
+            resource_kind="unknown",
+            message=message,
+        )
+    except subprocess.TimeoutExpired:
+        return ApplyResult(
+            success=False,
+            resource_name="unknown",
+            resource_kind="unknown",
+            message="kubectl command timed out after 60 seconds.",
+        )
+    except FileNotFoundError:
+        return ApplyResult(
+            success=False,
+            resource_name="unknown",
+            resource_kind="unknown",
+            message="kubectl not found in PATH.",
+        )
