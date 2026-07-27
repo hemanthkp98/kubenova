@@ -48,6 +48,14 @@ Open [http://localhost:5173](http://localhost:5173) once the stack is healthy.
 
 ---
 
+## For teams
+
+Want to run KubeNova as a **shared service** that your whole team accesses via a URL — no setup on each person's machine? The [`deploy.sh`](../deploy.sh) script builds the Docker images, creates all Kubernetes resources, and exposes KubeNova externally in one command.
+
+→ **[Team Deployment Guide](./TEAM_DEPLOYMENT.md)**
+
+---
+
 ## Prerequisites
 
 ### Required
@@ -187,6 +195,7 @@ make clean            # stop containers and remove volumes
 
 | Document | Description |
 |---|---|
+| [TEAM_DEPLOYMENT.md](./TEAM_DEPLOYMENT.md) | Deploy KubeNova to a cluster for the whole team to share |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, data flow, LangGraph state machine |
 | [API.md](./API.md) | Full REST and WebSocket API reference |
 | [LLM_PROVIDERS.md](./LLM_PROVIDERS.md) | Configuring Anthropic, OpenAI, Gemini, and Ollama |
