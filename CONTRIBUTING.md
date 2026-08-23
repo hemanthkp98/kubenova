@@ -83,7 +83,7 @@ make test-e2e     # playwright (requires running instance)
    ```
 3. Add `"myprovider"` to the `LLM_PROVIDER` Literal in `config.py`.
 4. Add tests in `tests/unit/test_llm_factory.py`.
-5. Document in `docs/LLM_PROVIDERS.md`.
+5. Document in [Configuration](docs/configuration.md).
 
 ---
 
@@ -110,7 +110,7 @@ make test-e2e     # playwright (requires running instance)
 1. Add a function in `backend/app/core/agents/nodes.py`.
 2. Register it in `graph.py` with `graph.add_node()`.
 3. Add edges with `graph.add_edge()` or `graph.add_conditional_edges()`.
-4. Update the state diagram in `docs/ARCHITECTURE.md`.
+4. Update the state diagram in [Architecture](docs/architecture.md).
 
 ---
 
@@ -120,6 +120,7 @@ make test-e2e     # playwright (requires running instance)
 - **TypeScript**: strict mode, no `any` (document exceptions), file-level JSDoc in every file.
 - **Test coverage minimum**: 80% for backend, component smoke tests + interaction tests for frontend.
 - **No hardcoded secrets**: use environment variables or the Kubernetes Secret mechanism.
+- For complete command references, see [Development Guide](docs/development.md).
 
 ---
 
@@ -130,7 +131,7 @@ Before opening a pull request:
 - [ ] All tests pass (`make test`)
 - [ ] Lint is clean (`make lint`)
 - [ ] TypeScript compiles without errors (`cd frontend && npx tsc --noEmit`)
-- [ ] Documentation updated (API.md, ARCHITECTURE.md if relevant)
+- [ ] Documentation updated (`docs/api.md`, `docs/architecture.md` if relevant)
 - [ ] No secrets or API keys committed
 - [ ] New environment variables added to `.env.example`
 - [ ] Helm chart updated if Kubernetes resources changed

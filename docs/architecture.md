@@ -1,6 +1,6 @@
-# KubeNova Architecture
+# Architecture
 
-This document explains the design decisions behind KubeNova and provides Mermaid diagrams for each major architectural concern.
+System design, LangGraph state machine, data flows, and architectural design decisions for KubeNova.
 
 ---
 

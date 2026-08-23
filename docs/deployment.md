@@ -1,8 +1,8 @@
-# KubeNova — Team Deployment Guide
+# Deployment
 
-Deploy KubeNova as a **shared, always-on service inside your Kubernetes cluster** so your entire team gets a single URL to chat with the cluster — no local setup required for anyone after the initial deploy.
+Deploy KubeNova as a shared, always-on service inside your Kubernetes cluster so your entire team gets a single URL to chat with the cluster.
 
-> **Not what you need?** If you just want to run KubeNova on your own machine and point it at a cluster, use the [Docker Compose quickstart](./README.md#quick-start) instead — it's two commands and takes under a minute.
+> **Not what you need?** If you just want to run KubeNova on your own machine and point it at a cluster, use the [Docker Compose Quickstart](getting-started.md) instead — it's two commands and takes under a minute.
 
 ---
 
@@ -161,7 +161,7 @@ LLM_API_KEY=""
 LLM_BASE_URL="http://ollama.ollama.svc.cluster.local:11434"
 ```
 
-See [LLM_PROVIDERS.md](./LLM_PROVIDERS.md) for full Ollama cluster setup instructions.
+See [Configuration](configuration.md) for full Ollama cluster setup instructions.
 
 ---
 

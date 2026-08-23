@@ -1,6 +1,6 @@
-# KubeNova API Reference
+# API Reference
 
-All REST endpoints are prefixed with `/api`. WebSocket endpoints are under `/api/ws`.
+REST and WebSocket endpoint specifications, request payloads, and response schemas for KubeNova.
 
 ---
 
