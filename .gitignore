@@ -43,6 +43,7 @@ frontend/.vite/
 # Claude Code context files
 CLAUDE.md
 .claude/
+.agents/
 
 # Editor
 .vscode/
